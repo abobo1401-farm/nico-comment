@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ABO ニコニココメント OBS表示</title>
+<style>
+  html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: transparent;
+    font-family: "Yu Gothic", "Meiryo", sans-serif;
+  }
+  #stage {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    background: transparent;
+  }
+  .comment {
+    position: absolute;
+    left: 100vw;
+    white-space: nowrap;
+    font-weight: 900;
+    text-shadow:
+      -2px -2px 0 #000,
+       2px -2px 0 #000,
+      -2px  2px 0 #000,
+       2px  2px 0 #000,
+       0px  0px 8px #000;
+    animation-name: moveLeft;
+    animation-timing-function: linear;
+    animation-fill-mode: forwards;
+    will-change: transform;
+  }
+  .rainbow {
+    background: linear-gradient(90deg, red, orange, yellow, lime, cyan, blue, violet, red);
+    background-size: 300% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent !important;
+    animation-name: moveLeft, rainbowMove;
+    animation-timing-function: linear, linear;
+    animation-iteration-count: 1, infinite;
+    animation-fill-mode: forwards, none;
+  }
+  @keyframes moveLeft {
+    from { transform: translateX(0); }
+    to   { transform: translateX(calc(-100vw - 120%)); }
+  }
+  @keyframes rainbowMove {
+    from { background-position: 0% 50%; }
+    to   { background-position: 300% 50%; }
+  }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import { getDatabase, ref, onChildAdded, remove, query, limitToLast } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBQk8Qo1hAF_pO7BO1s_ailYTcGrFiYN6E",
+  authDomain: "abo-nicocomment.firebaseapp.com",
+  databaseURL: "https://abo-nicocomment-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "abo-nicocomment",
+  storageBucket: "abo-nicocomment.firebasestorage.app",
+  messagingSenderId: "364820533562",
+  appId: "1:364820533562:web:658a02e8603c8469ac8003"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const commentsRef = ref(db, "nicoComments");
+const stage = document.getElementById("stage");
+
+const lanes = 8;
+let laneIndex = 0;
+const startedAt = Date.now();
+
+const colorMap = {
+  white: "#ffffff",
+  red: "#ff4b4b",
+  blue: "#4bb3ff",
+  yellow: "#ffe94b",
+  green: "#5cff7a",
+  pink: "#ff7be8",
+  orange: "#ff9d3b"
+};
+const sizeMap = {
+  small: 28,
+  medium: 40,
+  large: 56,
+  xlarge: 74
+};
+
+function sanitize(text) {
+  return String(text || "").replace(/[<>]/g, "").slice(0, 40);
+}
+
+function showComment(data) {
+  if (!data || !data.text) return;
+  if (data.createdAt && data.createdAt < startedAt - 5000) return;
+
+  const text = sanitize(data.text);
+  const color = data.color || "white";
+  const size = data.size || "medium";
+  const speed = Number(data.speed || 9);
+
+  const el = document.createElement("div");
+  el.className = "comment";
+  el.textContent = text;
+  el.style.fontSize = (sizeMap[size] || 40) + "px";
+  el.style.color = colorMap[color] || "#ffffff";
+  el.style.animationDuration = Math.max(5, Math.min(16, speed)) + "s";
+
+  const laneHeight = 100 / lanes;
+  const lane = laneIndex % lanes;
+  laneIndex++;
+  const randomOffset = Math.random() * Math.max(0, laneHeight - 8);
+  el.style.top = `calc(${lane * laneHeight + randomOffset}vh)`;
+
+  if (color === "rainbow") el.classList.add("rainbow");
+
+  stage.appendChild(el);
+  setTimeout(() => el.remove(), (Math.max(5, Math.min(16, speed)) * 1000) + 1000);
+}
+
+onChildAdded(query(commentsRef, limitToLast(30)), (snapshot) => {
+  showComment(snapshot.val());
+});
+</script>
+</body>
+</html>

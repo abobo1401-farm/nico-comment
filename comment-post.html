@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ニコニココメント投稿</title>
+<style>
+  body{margin:0;min-height:100vh;font-family:"Yu Gothic","Meiryo",sans-serif;background:#111;color:#fff;display:flex;align-items:center;justify-content:center;}
+  .box{width:min(92vw,520px);background:#222;border-radius:22px;padding:24px;box-shadow:0 10px 30px #0008;}
+  h1{font-size:24px;margin:0 0 18px;text-align:center;}
+  label{display:block;margin-top:14px;font-weight:bold;}
+  input,select,button{width:100%;box-sizing:border-box;font-size:18px;border-radius:12px;border:0;padding:14px;margin-top:8px;}
+  input,select{background:#fff;color:#111;}
+  button{background:#ff6b9d;color:#fff;font-weight:900;margin-top:20px;cursor:pointer;}
+  button:disabled{background:#777;cursor:not-allowed;}
+  .note{font-size:13px;color:#bbb;margin-top:12px;line-height:1.6;}
+  .status{margin-top:14px;text-align:center;font-weight:bold;min-height:24px;}
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>🍎 ニコニココメント投稿</h1>
+  <label>コメント</label>
+  <input id="text" maxlength="40" placeholder="コメントを書く" />
+
+  <label>文字色</label>
+  <select id="color">
+    <option value="white">白</option>
+    <option value="red">赤</option>
+    <option value="blue">青</option>
+    <option value="yellow">黄</option>
+    <option value="green">緑</option>
+    <option value="pink">ピンク</option>
+    <option value="orange">オレンジ</option>
+    <option value="rainbow">虹</option>
+  </select>
+
+  <label>文字サイズ</label>
+  <select id="size">
+    <option value="small">小</option>
+    <option value="medium" selected>中</option>
+    <option value="large">大</option>
+    <option value="xlarge">特大</option>
+  </select>
+
+  <button id="send">送信</button>
+  <div class="status" id="status"></div>
+  <div class="note">連投防止：5秒に1回まで。最大40文字。</div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import { getDatabase, ref, push, set, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBQk8Qo1hAF_pO7BO1s_ailYTcGrFiYN6E",
+  authDomain: "abo-nicocomment.firebaseapp.com",
+  databaseURL: "https://abo-nicocomment-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "abo-nicocomment",
+  storageBucket: "abo-nicocomment.firebasestorage.app",
+  messagingSenderId: "364820533562",
+  appId: "1:364820533562:web:658a02e8603c8469ac8003"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const textEl = document.getElementById("text");
+const colorEl = document.getElementById("color");
+const sizeEl = document.getElementById("size");
+const sendBtn = document.getElementById("send");
+const statusEl = document.getElementById("status");
+let lastSend = 0;
+const ngWords = ["死ね", "殺す", "fuck"];
+
+function clean(text){ return String(text || "").replace(/[<>]/g, "").trim().slice(0,40); }
+
+async function sendComment(){
+  const now = Date.now();
+  if(now - lastSend < 5000){ statusEl.textContent = "少し待ってね！"; return; }
+  const text = clean(textEl.value);
+  if(!text){ statusEl.textContent = "コメントを入力してね"; return; }
+  if(ngWords.some(w => text.toLowerCase().includes(w.toLowerCase()))){ statusEl.textContent = "送信できない言葉があります"; return; }
+
+  lastSend = now;
+  sendBtn.disabled = true;
+  await set(push(ref(db, "nicoComments")), {
+    text,
+    color: colorEl.value,
+    size: sizeEl.value,
+    speed: 9,
+    createdAt: Date.now(),
+    serverTime: serverTimestamp()
+  });
+  textEl.value = "";
+  statusEl.textContent = "送信しました！";
+  setTimeout(() => { sendBtn.disabled = false; statusEl.textContent = ""; }, 5000);
+}
+
+sendBtn.addEventListener("click", sendComment);
+textEl.addEventListener("keydown", e => { if(e.key === "Enter") sendComment(); });
+</script>
+</body>
+</html>
