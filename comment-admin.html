@@ -46,7 +46,7 @@
 </div>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-import { getDatabase, ref, push, set, remove, serverTimestamp, onValue, query, limitToLast, orderByChild } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
+import { getDatabase, ref, push, set, remove, serverTimestamp, onValue } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
 const firebaseConfig = {
   apiKey: "AIzaSyBQk8Qo1hAF_pO7BO1s_ailYTcGrFiYN6E",
   authDomain: "abo-nicocomment.firebaseapp.com",
@@ -85,15 +85,13 @@ document.getElementById("clear").onclick = async () => {
   }
 };
 
+// Firebaseのpushキーで最新順に並べる。最新100件だけ表示。
 onValue(ref(db,"nicoComments"), snapshot => {
   const arr = [];
   snapshot.forEach(child => arr.push({key: child.key, ...child.val()}));
-  arr.sort((a,b)=>{
-    const diff = (b.createdAt||0)-(a.createdAt||0);
-    if(diff !== 0) return diff;
-    return String(b.key).localeCompare(String(a.key));
-  });
+  arr.sort((a,b)=>String(b.key).localeCompare(String(a.key)));
   const latest100 = arr.slice(0,100);
+
   historyEl.innerHTML = "";
   if(latest100.length === 0){historyEl.innerHTML = '<div class="muted">履歴なし</div>'; return;}
   latest100.forEach(item => {
