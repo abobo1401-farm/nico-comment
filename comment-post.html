@@ -57,7 +57,7 @@
 
   <button id="send">送信</button>
   <div class="status" id="status"></div>
-  <div class="note">連投防止：5秒に1回まで。最大40文字。虹色は削除しました。</div>
+  <div class="note">連投防止：5秒に1回まで。最大40文字。</div>
 </div>
 
 <script type="module">
@@ -83,33 +83,41 @@ const speedEl = document.getElementById("speed");
 const sendBtn = document.getElementById("send");
 const statusEl = document.getElementById("status");
 let lastSend = 0;
-const ngWords = ["死ね", "殺す", "fuck"];
 
-function clean(text){ return String(text || "").replace(/[<>]/g, "").trim().slice(0,40); }
+function clean(text){return String(text || "").replace(/[<>]/g, "").trim().slice(0, 40);}
 
 async function sendComment(){
   const now = Date.now();
-  if(now - lastSend < 5000){ statusEl.textContent = "少し待ってね！"; return; }
+  if(now - lastSend < 5000){
+    statusEl.textContent = "連投防止：少し待ってね";
+    return;
+  }
   const text = clean(textEl.value);
-  if(!text){ statusEl.textContent = "コメントを入力してね"; return; }
-  if(ngWords.some(w => text.toLowerCase().includes(w.toLowerCase()))){ statusEl.textContent = "送信できない言葉があります"; return; }
-
-  lastSend = now;
+  if(!text){
+    statusEl.textContent = "コメントを入力してね";
+    return;
+  }
   sendBtn.disabled = true;
-  await set(push(ref(db, "nicoComments")), {
-    text,
-    color: colorEl.value,
-    size: sizeEl.value,
-    speed: speedEl.value,
-    createdAt: Date.now(),
-    serverTime: serverTimestamp()
-  });
-  textEl.value = "";
-  statusEl.textContent = "送信しました！";
-  setTimeout(() => { sendBtn.disabled = false; statusEl.textContent = ""; }, 5000);
+  try{
+    await set(push(ref(db, "nicoComments")), {
+      text,
+      color: colorEl.value,
+      size: sizeEl.value,
+      speed: speedEl.value,
+      createdAt: Date.now(),
+      serverTime: serverTimestamp()
+    });
+    lastSend = now;
+    textEl.value = "";
+    statusEl.textContent = "送信しました！";
+  }catch(e){
+    console.error(e);
+    statusEl.textContent = "送信できませんでした";
+  }
+  setTimeout(()=>{sendBtn.disabled=false;}, 800);
 }
 
-sendBtn.addEventListener("click", sendComment);
+sendBtn.onclick = sendComment;
 textEl.addEventListener("keydown", e => { if(e.key === "Enter") sendComment(); });
 </script>
 </body>

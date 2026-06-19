@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ABO コメント履歴 OBS表示</title>
+<style>
+  html, body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent;font-family:"Yu Gothic","Meiryo",sans-serif;}
+  #historyBox{width:100vw;height:100vh;box-sizing:border-box;padding:18px 20px;border-radius:22px;background:rgba(0,0,0,.45);border:2px solid rgba(255,255,255,.45);color:#fff;text-shadow:0 2px 4px #000;font-weight:800;backdrop-filter:blur(4px);overflow:hidden;}
+  #title{font-size:28px;margin-bottom:10px;white-space:nowrap;}
+  .item{font-size:30px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-top:1px solid rgba(255,255,255,.22);padding:6px 0 2px;}
+  .empty{opacity:.7;font-size:24px;padding-top:16px;}
+</style>
+</head>
+<body>
+<div id="historyBox">
+  <div id="title">💬 コメント履歴</div>
+  <div id="list"><div class="empty">コメント待ち</div></div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import { getDatabase, ref, onValue, query, limitToLast, orderByChild } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBQk8Qo1hAF_pO7BO1s_ailYTcGrFiYN6E",
+  authDomain: "abo-nicocomment.firebaseapp.com",
+  databaseURL: "https://abo-nicocomment-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "abo-nicocomment",
+  storageBucket: "abo-nicocomment.firebasestorage.app",
+  messagingSenderId: "364820533562",
+  appId: "1:364820533562:web:658a02e8603c8469ac8003"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const list = document.getElementById("list");
+function sanitize(text){return String(text || "").replace(/[<>]/g, "").slice(0, 40);}
+
+onValue(query(ref(db, "nicoComments"), orderByChild("createdAt"), limitToLast(5)), (snapshot) => {
+  const arr = [];
+  snapshot.forEach(child => arr.push(child.val()));
+  arr.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  list.innerHTML = "";
+  if(arr.length === 0){
+    list.innerHTML = '<div class="empty">コメント待ち</div>';
+    return;
+  }
+  arr.forEach(data => {
+    const div = document.createElement("div");
+    div.className = "item";
+    div.textContent = sanitize(data.text);
+    list.appendChild(div);
+  });
+});
+</script>
+</body>
+</html>
