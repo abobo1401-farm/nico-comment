@@ -20,7 +20,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-import { getDatabase, ref, onValue, query, limitToLast, orderByChild } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
+import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBQk8Qo1hAF_pO7BO1s_ailYTcGrFiYN6E",
@@ -35,18 +35,29 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const list = document.getElementById("list");
-function sanitize(text){return String(text || "").replace(/[<>]/g, "").slice(0, 40);}
 
-onValue(query(ref(db, "nicoComments"), orderByChild("createdAt"), limitToLast(5)), (snapshot) => {
+function sanitize(text){return String(text || "").replace(/[<>]/g, "").slice(0, 40);}
+function sortTime(item){
+  // createdAtが無い古い投稿でも、Firebaseのpushキー順で新旧を補正する
+  return item.createdAt || 0;
+}
+
+onValue(ref(db, "nicoComments"), (snapshot) => {
   const arr = [];
-  snapshot.forEach(child => arr.push(child.val()));
-  arr.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  snapshot.forEach(child => arr.push({ key: child.key, ...child.val() }));
+  arr.sort((a,b) => {
+    const diff = sortTime(b) - sortTime(a);
+    if(diff !== 0) return diff;
+    return String(b.key).localeCompare(String(a.key));
+  });
+  const latest5 = arr.slice(0, 5);
+
   list.innerHTML = "";
-  if(arr.length === 0){
+  if(latest5.length === 0){
     list.innerHTML = '<div class="empty">コメント待ち</div>';
     return;
   }
-  arr.forEach(data => {
+  latest5.forEach(data => {
     const div = document.createElement("div");
     div.className = "item";
     div.textContent = sanitize(data.text);

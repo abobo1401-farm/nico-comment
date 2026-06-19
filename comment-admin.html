@@ -37,7 +37,7 @@
     </select>
   </div>
   <button id="test">テスト送信</button>
-  <button class="danger" id="clear">コメント全削除</button>
+  <button class="danger" id="clear">履歴リセット（全削除）</button>
   <div class="status" id="status"></div>
 
   <h2>最新100件履歴</h2>
@@ -79,19 +79,24 @@ document.getElementById("test").onclick = async () => {
   statusEl.textContent = "テスト送信しました";
 };
 document.getElementById("clear").onclick = async () => {
-  if(confirm("コメントを全部消していい？")){
+  if(confirm("履歴をリセットします。コメントを全部消していい？")){
     await remove(ref(db,"nicoComments"));
-    statusEl.textContent = "削除しました";
+    statusEl.textContent = "履歴をリセットしました";
   }
 };
 
-onValue(query(ref(db,"nicoComments"), orderByChild("createdAt"), limitToLast(100)), snapshot => {
+onValue(ref(db,"nicoComments"), snapshot => {
   const arr = [];
   snapshot.forEach(child => arr.push({key: child.key, ...child.val()}));
-  arr.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  arr.sort((a,b)=>{
+    const diff = (b.createdAt||0)-(a.createdAt||0);
+    if(diff !== 0) return diff;
+    return String(b.key).localeCompare(String(a.key));
+  });
+  const latest100 = arr.slice(0,100);
   historyEl.innerHTML = "";
-  if(arr.length === 0){historyEl.innerHTML = '<div class="muted">履歴なし</div>'; return;}
-  arr.forEach(item => {
+  if(latest100.length === 0){historyEl.innerHTML = '<div class="muted">履歴なし</div>'; return;}
+  latest100.forEach(item => {
     const row = document.createElement("div");
     row.className = "item";
     const t = document.createElement("div"); t.textContent = timeStr(item.createdAt);
