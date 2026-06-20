@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="Cache-Control" content="no-store" />
 <title>ニコニココメント管理</title>
 <style>
   body{margin:0;min-height:100vh;font-family:"Yu Gothic","Meiryo",sans-serif;background:#101820;color:#fff;padding:20px;box-sizing:border-box;}
@@ -18,7 +19,7 @@
   .item{display:grid;grid-template-columns:74px 1fr 58px;gap:8px;align-items:center;border-bottom:1px solid rgba(255,255,255,.12);padding:7px 0;font-size:15px;}
   .text{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .mini{font-size:12px;padding:7px;border-radius:8px;background:#ff4b4b;}
-  .muted{color:#aac;font-size:13px;}
+  .muted{color:#aac;font-size:13px;line-height:1.6;}
 </style>
 </head>
 <body>
@@ -41,12 +42,12 @@
   <div class="status" id="status"></div>
 
   <h2>最新100件履歴</h2>
-  <div class="muted">新しい順に表示。個別削除もできます。</div>
+  <div class="muted">新しい順に表示。個別削除もできます。<br>安定化のため、Firebaseから最新100件だけ取得しています。</div>
   <div class="history" id="history"></div>
 </div>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-import { getDatabase, ref, push, set, remove, serverTimestamp, onValue } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
+import { getDatabase, ref, push, set, remove, serverTimestamp, onValue, query, limitToLast } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
 const firebaseConfig = {
   apiKey: "AIzaSyBQk8Qo1hAF_pO7BO1s_ailYTcGrFiYN6E",
   authDomain: "abo-nicocomment.firebaseapp.com",
@@ -85,16 +86,10 @@ document.getElementById("clear").onclick = async () => {
   }
 };
 
-// Firebaseのpushキーで最新順に並べる。最新100件だけ表示。
-onValue(ref(db,"nicoComments"), snapshot => {
-  const arr = [];
-  snapshot.forEach(child => arr.push({key: child.key, ...child.val()}));
-  arr.sort((a,b)=>String(b.key).localeCompare(String(a.key)));
-  const latest100 = arr.slice(0,100);
-
+function renderHistory(items){
   historyEl.innerHTML = "";
-  if(latest100.length === 0){historyEl.innerHTML = '<div class="muted">履歴なし</div>'; return;}
-  latest100.forEach(item => {
+  if(items.length === 0){historyEl.innerHTML = '<div class="muted">履歴なし</div>'; return;}
+  items.forEach(item => {
     const row = document.createElement("div");
     row.className = "item";
     const t = document.createElement("div"); t.textContent = timeStr(item.createdAt);
@@ -104,6 +99,15 @@ onValue(ref(db,"nicoComments"), snapshot => {
     row.append(t,text,btn);
     historyEl.appendChild(row);
   });
+}
+
+// 重要：全部取得しない。最新100件だけ取得して、逆順表示。
+const latest100Query = query(ref(db,"nicoComments"), limitToLast(100));
+onValue(latest100Query, snapshot => {
+  const items = [];
+  snapshot.forEach(child => items.push({key: child.key, ...child.val()}));
+  items.reverse();
+  renderHistory(items);
 });
 </script>
 </body>
