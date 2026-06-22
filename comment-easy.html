@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>簡易コメント</title>
+<style>
+  :root{
+    --bg:#111;
+    --panel:#1f1f1f;
+    --accent:#ff6b9d;
+    --text:#fff;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;
+    width:100%;
+    min-height:100dvh;
+    font-family:"Yu Gothic","Meiryo",sans-serif;
+    background:var(--bg);
+    color:var(--text);
+  }
+  body{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:8px;
+  }
+  .mini{
+    width:100%;
+    max-width:560px;
+    background:var(--panel);
+    border-radius:16px;
+    padding:10px;
+    box-shadow:0 8px 24px #0008;
+  }
+  .title{
+    font-size:13px;
+    opacity:.75;
+    margin:0 0 6px 3px;
+    line-height:1.2;
+  }
+  .form{
+    display:grid;
+    grid-template-columns:1fr 92px;
+    gap:8px;
+    align-items:center;
+  }
+  input{
+    width:100%;
+    height:48px;
+    border:0;
+    border-radius:12px;
+    padding:0 12px;
+    font-size:18px;
+    background:#fff;
+    color:#111;
+    outline:none;
+  }
+  button{
+    width:100%;
+    height:48px;
+    border:0;
+    border-radius:12px;
+    background:var(--accent);
+    color:#fff;
+    font-size:18px;
+    font-weight:900;
+    cursor:pointer;
+  }
+  button:disabled{background:#777;cursor:not-allowed;}
+  .status{
+    min-height:18px;
+    margin-top:5px;
+    text-align:center;
+    font-size:13px;
+    font-weight:bold;
+    color:#ffd6e5;
+  }
+  @media (max-height:220px){
+    body{align-items:flex-start;padding:5px;}
+    .mini{padding:7px;border-radius:12px;}
+    .title{display:none;}
+    input,button{height:42px;font-size:16px;}
+    .status{font-size:12px;margin-top:3px;min-height:15px;}
+  }
+</style>
+</head>
+<body>
+  <div class="mini">
+    <div class="title">💬 ニコニココメント簡易投稿</div>
+    <div class="form">
+      <input id="text" maxlength="40" placeholder="コメント" autocomplete="off" />
+      <button id="send">送信</button>
+    </div>
+    <div class="status" id="status"></div>
+  </div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import { getDatabase, ref, push, set, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBQk8Qo1hAF_pO7BO1s_ailYTcGrFiYN6E",
+  authDomain: "abo-nicocomment.firebaseapp.com",
+  databaseURL: "https://abo-nicocomment-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "abo-nicocomment",
+  storageBucket: "abo-nicocomment.firebasestorage.app",
+  messagingSenderId: "364820533562",
+  appId: "1:364820533562:web:658a02e8603c8469ac8003"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const textEl = document.getElementById("text");
+const sendBtn = document.getElementById("send");
+const statusEl = document.getElementById("status");
+let lastSend = 0;
+
+function clean(text){
+  return String(text || "").replace(/[<>]/g, "").trim().slice(0, 40);
+}
+
+async function sendComment(){
+  const now = Date.now();
+  if(now - lastSend < 3000){
+    statusEl.textContent = "少し待ってね";
+    return;
+  }
+  const text = clean(textEl.value);
+  if(!text){
+    statusEl.textContent = "コメントを入力してね";
+    return;
+  }
+  sendBtn.disabled = true;
+  try{
+    await set(push(ref(db, "nicoComments")), {
+      text,
+      color: "white",
+      size: "medium",
+      speed: "normal",
+      createdAt: Date.now(),
+      serverTime: serverTimestamp()
+    });
+    lastSend = now;
+    textEl.value = "";
+    statusEl.textContent = "送信しました！";
+    textEl.focus();
+  }catch(e){
+    console.error(e);
+    statusEl.textContent = "送信できませんでした";
+  }
+  setTimeout(()=>{sendBtn.disabled=false;}, 700);
+}
+
+sendBtn.onclick = sendComment;
+textEl.addEventListener("keydown", e => {
+  if(e.key === "Enter") sendComment();
+});
+</script>
+</body>
+</html>
